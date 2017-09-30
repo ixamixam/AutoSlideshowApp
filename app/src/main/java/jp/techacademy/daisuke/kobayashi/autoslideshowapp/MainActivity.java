@@ -28,18 +28,34 @@ public class MainActivity extends AppCompatActivity {
     TextView mTimerText;
     double mTimerSec = 0.0;
 
-    Button mStartButton;
-    Button mPauseButton;
-    Button mResetButton;
-
     Handler mHandler = new Handler();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //----許可取得
+        // Android 6.0以降の場合
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // パーミッションの許可状態を確認する
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                // 許可されている
+                getContentsInfo();
+            } else {
+                // 許可されていないので許可ダイアログを表示する
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
+            }
+            // Android 5系以下の場合
+        } else {
+            getContentsInfo();
+        }
 
+        //----ボタン処理
+        Button mStartButton;
+        Button mPauseButton;
+        Button mResetButton;
 
         mTimerText = (TextView) findViewById(R.id.timer);
         mStartButton = (Button) findViewById(R.id.start_button);
@@ -49,8 +65,45 @@ public class MainActivity extends AppCompatActivity {
         mStartButton.setOnClickListener(startClickListener);
         mPauseButton.setOnClickListener(pauseClickListener);
         mResetButton.setOnClickListener(resetClickListener);
+    }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_CODE:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    getContentsInfo();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    
+    //URLの取得とLOG出力
+    private void getContentsInfo() {
 
+        // 画像の情報を取得する
+        ContentResolver resolver = getContentResolver();
+        Cursor cursor = resolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, // データの種類
+                null, // 項目(null = 全項目)
+                null, // フィルタ条件(null = フィルタなし)
+                null, // フィルタ用パラメータ
+                null // ソート (null ソートなし)
+        );
+
+        if (cursor.moveToFirst()) {
+            do {
+                // indexからIDを取得し、そのIDから画像のURIを取得する
+                int fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+                Long id = cursor.getLong(fieldIndex);
+                Uri imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+
+                Log.d("ANDROID", "URI : " + imageUri.toString());
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
     }
 
     //Startボタン
