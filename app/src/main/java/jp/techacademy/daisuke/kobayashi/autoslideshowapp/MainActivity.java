@@ -24,8 +24,8 @@ import android.widget.ImageView;
 public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSIONS_REQUEST_CODE = 100;
-    public Cursor cursor;
-    Timer mTimer;
+    private Cursor cursor;
+    private Timer mTimer;
     Handler mHandler = new Handler();
 
 
@@ -50,8 +50,11 @@ public class MainActivity extends AppCompatActivity {
             getContentsInfo();
         }
 
+        main();
 
+    }
 
+    private void main(){
         //とりあえず１枚目セット
 
         // テスト用
@@ -64,7 +67,6 @@ public class MainActivity extends AppCompatActivity {
                 setImageview(cursor);
             }
         }
-
 
         //----ボタン処理
         Button mStartButton;
@@ -105,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     getContentsInfo();
                     Log.d("ANDROID", "許可された");
-                    return;
+                    main();
                 }
                 break;
             default:
@@ -164,12 +166,14 @@ public class MainActivity extends AppCompatActivity {
     OnClickListener nextClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
-            if (cursor.moveToNext()) {
-                cursor.moveToNext();
-                setImageview(cursor);
-            }else {
-                cursor.moveToFirst();
-                setImageview(cursor);
+            if (mTimer == null) {
+                if (cursor.moveToNext()) {
+                    cursor.moveToNext();
+                    setImageview(cursor);
+                } else {
+                    cursor.moveToFirst();
+                    setImageview(cursor);
+                }
             }
         }
     };
@@ -178,12 +182,14 @@ public class MainActivity extends AppCompatActivity {
     OnClickListener previousClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
-            if (cursor.moveToPrevious()) {
-                cursor.moveToPrevious();
-                setImageview(cursor);
-            }else {
-                cursor.moveToLast();
-                setImageview(cursor);
+            if (mTimer == null) {
+                if (cursor.moveToPrevious()) {
+                    cursor.moveToPrevious();
+                    setImageview(cursor);
+                } else {
+                    cursor.moveToLast();
+                    setImageview(cursor);
+                }
             }
         }
     };
