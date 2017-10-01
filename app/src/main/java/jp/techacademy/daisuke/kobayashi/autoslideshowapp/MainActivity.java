@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Build;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -17,12 +18,14 @@ import android.provider.MediaStore;
 import android.net.Uri;
 import java.util.Timer;
 import java.util.TimerTask;
-import android.util.Log;
+import android.widget.ImageView;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSIONS_REQUEST_CODE = 100;
+
+    Cursor cursor;
 
     Timer mTimer;
     TextView mTimerText;
@@ -42,31 +45,48 @@ public class MainActivity extends AppCompatActivity {
             // パーミッションの許可状態を確認する
             if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                 // 許可されている
-                getContentsInfo();
+                cursor = getContentsInfo();
             } else {
                 // 許可されていないので許可ダイアログを表示する
                 requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
             }
             // Android 5系以下の場合
         } else {
-            getContentsInfo();
         }
+
+
+
+
+        //とりあえず１枚目セット
+
+        // テスト用
+        // cursor = null;
+
+
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                setImageview(cursor);
+            }
+        }
+
 
         //----ボタン処理
         Button mStartButton;
         Button mPauseButton;
         Button mResetButton;
 
-        mTimerText = (TextView) findViewById(R.id.timer);
         mStartButton = (Button) findViewById(R.id.start_button);
         mPauseButton = (Button) findViewById(R.id.pause_button);
         mResetButton = (Button) findViewById(R.id.reset_button);
 
-        mStartButton.setOnClickListener(startClickListener);
-        mPauseButton.setOnClickListener(pauseClickListener);
-        mResetButton.setOnClickListener(resetClickListener);
+        if (cursor != null) {
+            mStartButton.setOnClickListener(startClickListener);
+            mPauseButton.setOnClickListener(nextClickListener);
+            mResetButton.setOnClickListener(previousClickListener);
+        }
     }
 
+    //付与チェック
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
@@ -79,9 +99,9 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
-    
-    //URLの取得とLOG出力
-    private void getContentsInfo() {
+
+    //URLの取得
+    private Cursor getContentsInfo() {
 
         // 画像の情報を取得する
         ContentResolver resolver = getContentResolver();
@@ -92,21 +112,20 @@ public class MainActivity extends AppCompatActivity {
                 null, // フィルタ用パラメータ
                 null // ソート (null ソートなし)
         );
-
-        if (cursor.moveToFirst()) {
-            do {
-                // indexからIDを取得し、そのIDから画像のURIを取得する
-                int fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID);
-                Long id = cursor.getLong(fieldIndex);
-                Uri imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
-
-                Log.d("ANDROID", "URI : " + imageUri.toString());
-            } while (cursor.moveToNext());
-        }
-        cursor.close();
+        return cursor;
     }
 
-    //Startボタン
+    //画像セット
+    private void setImageview(Cursor cursor){
+            int fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+            Long id = cursor.getLong(fieldIndex);
+            Uri imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+
+            ImageView imageVIew = (ImageView) findViewById(R.id.imageView);
+            imageVIew.setImageURI(imageUri);
+    }
+
+    //Start・Stopボタン
     OnClickListener startClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -115,42 +134,58 @@ public class MainActivity extends AppCompatActivity {
                 mTimer.schedule(new TimerTask() {
                     @Override
                     public void run() {
-                        mTimerSec += 0.1;
+                        if (cursor.moveToNext()) {
+                            cursor.moveToNext();
 
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                mTimerText.setText(String.format("%.1f", mTimerSec));
-                            }
-                        });
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    setImageview(cursor);
+                                }
+                            });
+
+                        } else {
+                            cursor.moveToFirst();
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    setImageview(cursor);
+                                }
+                            });
+                        }
                     }
-                }, 100, 100);
+                }, 1000, 2000);
+            }else {
+                mTimer.cancel();
+                mTimer = null;
             }
         }
     };
 
-    //Pauseボタン
-    OnClickListener pauseClickListener = new OnClickListener() {
+    //Nextボタン
+    OnClickListener nextClickListener = new OnClickListener() {
         @Override
         public void onClick(View v) {
-            if (mTimer != null) {
-                mTimer.cancel();
-                mTimer = null;
+            if (cursor.moveToNext()) {
+                cursor.moveToNext();
+                setImageview(cursor);
+            }else {
+                cursor.moveToFirst();
+                setImageview(cursor);
             }
         }
     };
 
-    //Resetボタン
-    OnClickListener resetClickListener = new OnClickListener() {
+    //Previousボタン
+    OnClickListener previousClickListener = new OnClickListener() {
         @Override
-        public void onClick(View view) {
-            mTimerSec = 0.0;
-            mTimerText.setText(String.format("%.1f", mTimerSec));
-
-            if (mTimer != null) {
-                mTimer.cancel();
-                mTimer = null;
-
+        public void onClick(View v) {
+            if (cursor.moveToPrevious()) {
+                cursor.moveToPrevious();
+                setImageview(cursor);
+            }else {
+                cursor.moveToLast();
+                setImageview(cursor);
             }
         }
     };
