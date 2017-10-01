@@ -24,13 +24,8 @@ import android.widget.ImageView;
 public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSIONS_REQUEST_CODE = 100;
-
-    Cursor cursor;
-
+    public Cursor cursor;
     Timer mTimer;
-    TextView mTimerText;
-    double mTimerSec = 0.0;
-
     Handler mHandler = new Handler();
 
 
@@ -45,15 +40,15 @@ public class MainActivity extends AppCompatActivity {
             // パーミッションの許可状態を確認する
             if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                 // 許可されている
-                cursor = getContentsInfo();
+                getContentsInfo();
             } else {
                 // 許可されていないので許可ダイアログを表示する
                 requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
             }
             // Android 5系以下の場合
         } else {
+            getContentsInfo();
         }
-
 
 
 
@@ -62,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
         // テスト用
         // cursor = null;
 
+        Log.d("ANDROID", "動いてる？");
 
         if (cursor != null) {
             if (cursor.moveToFirst()) {
@@ -86,33 +82,35 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //付与チェック
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_CODE:
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    getContentsInfo();
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
     //URLの取得
-    private Cursor getContentsInfo() {
+    private void getContentsInfo() {
 
         // 画像の情報を取得する
         ContentResolver resolver = getContentResolver();
-        Cursor cursor = resolver.query(
+        Cursor cursorTemp = resolver.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI, // データの種類
                 null, // 項目(null = 全項目)
                 null, // フィルタ条件(null = フィルタなし)
                 null, // フィルタ用パラメータ
                 null // ソート (null ソートなし)
         );
-        return cursor;
+        cursor = cursorTemp;
+    }
+
+    //取得情報のチェック
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_CODE:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    getContentsInfo();
+                    Log.d("ANDROID", "許可された");
+                    return;
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     //画像セット
